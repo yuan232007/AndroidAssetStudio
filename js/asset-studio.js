@@ -2559,6 +2559,73 @@ imagelib.drawing.fx = function(effects, dstCtx, src, size) {
   dstCtx.restore(); // D1
 };
 
+
+imagelib.effects = {};
+
+imagelib.effects.renderLongShadow = function(ctx, w, h) {
+  var imgData = ctx.getImageData(0, 0, w, h);
+  for(var y = 0; y < imgData.height; y++) {
+    for(var x = 0; x < imgData.width; x++) {
+      if (imagelib.effects.isInShade(imgData, x, y)) {
+        imagelib.effects.castShade(imgData, x, y);
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+};
+
+imagelib.effects.renderScore = function(ctx, w, h) {
+  var imgData = ctx.getImageData(0, 0, w, h);
+  for(var y = 0; y < imgData.height/2; y++) {
+    for(var x = 0; x < imgData.width; x++) {
+      var color = [0, 0, 0, 24];
+      imagelib.effects.setColor(imgData, x, y, color);
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+};
+
+imagelib.effects.isInShade = function(imgData, x, y) {
+  var data = imgData.data;
+  while (true) {
+    // traverse towards top/left
+    x -= 1;
+    y -= 1;
+    if (x < 0 || y < 0) {
+      // reached edge
+      return false;
+    }
+    if (imagelib.effects.getAlpha(imgData, x, y)) {
+      // alpha value casts shade
+      return true;
+    }
+  }
+};
+
+imagelib.effects.castShade = function(imgData, x, y) {
+  var n = 32;
+  var step = n / (imgData.width + imgData.height);
+  var alpha = n - ((x + y) * step);
+  var color = [0, 0, 0, alpha];
+  //if (imgData.width == 48) console.log('shade alpha = ' + alpha + ' for ' + x + ',' + y);
+  return imagelib.effects.setColor(imgData, x, y, color);
+};
+
+imagelib.effects.setColor = function(imgData, x, y, color) {
+  var index = (y * imgData.width + x) * 4;
+  var data = imgData.data;
+  data[index] = color[0];
+  data[index + 1] = color[1];
+  data[index + 2] = color[2];
+  data[index + 3] = color[3];
+};
+
+imagelib.effects.getAlpha = function(imgData, x, y) {
+  var data = imgData.data;
+  var index = (y * imgData.width + x) * 4 + 3;
+  return data[index];
+};
+
 imagelib.loadImageResources = function(images, callback) {
   var imageResources = {};
 
@@ -3046,12 +3113,16 @@ studio.forms.ColorField = studio.forms.Field.extend({
       showInput: true,
       showPalette: true,
       palette: [
-        ['#fff', '#000'],
-        ['#33b5e5', '#09c'],
-        ['#a6c', '#93c'],
-        ['#9c0', '#690'],
-        ['#fb3', '#f80'],
-        ['#f44', '#c00']
+        ['#ffffff', '#000000'],
+        ['#f44336', '#e91e63'],
+        ['#9c27b0', '#673ab7'],
+        ['#3f51b5', '#2196f3'],
+        ['#03a9f4', '#00bcd4'],
+        ['#009688', '#4caf50'],
+        ['#8bc34a', '#cddc39'],
+        ['#ffeb3b', '#ffc107'],
+        ['#ff9800', '#ff5722'],
+        ['#9e9e9e', '#607d8b']
       ],
       localStorageKey: 'recentcolors',
       showInitial: true,
@@ -3620,8 +3691,8 @@ studio.forms.ImageField = studio.forms.Field.extend({
         .addClass('form-image-clipart-attribution')
         .html([
             'For clipart sources, visit ',
-            '<a href="http://developer.android.com/design/downloads/">',
-                'Android Design: Downloads',
+            '<a href="https://github.com/google/material-design-icons">',
+                'Material Design Icons on GitHub',
             '</a>.<br>',
             'Additional icons can be found at ',
             '<a href="http://www.androidicons.com">androidicons.com</a>.'
@@ -3772,7 +3843,7 @@ studio.forms.ImageField = studio.forms.Field.extend({
 
     $('img.form-image-clipart-item', this.el_.parent()).removeClass('selected');
     $('img[src="' + clipartSrc + '"]').addClass('selected');
-    
+
     this.imageParams_ = {
       isSvg: isSvg,
       canvgSvgUri: useCanvg ? clipartSrc : null,
@@ -4386,7 +4457,6 @@ studio.forms.ImageField.clipartList_ = [
 'icons/file_folder.svg',
 'icons/file_folder_open.svg',
 'icons/file_folder_shared.svg',
-'icons/foo',
 'icons/hardware_cast.svg',
 'icons/hardware_cast_connected.svg',
 'icons/hardware_computer.svg',
